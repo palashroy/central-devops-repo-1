@@ -23,7 +23,7 @@ on:
           - 'Promote qa to release'
 
 jobs:
-  evaluate-inputs:
+    evaluate-inputs:
     runs-on: ubuntu-latest
     outputs:
       source_branch: ${{ steps.vars.outputs.source }}
@@ -41,17 +41,22 @@ jobs:
             echo "target=release" >> $GITHUB_OUTPUT
           fi
 
-      # 2. Build a valid JSON array of ONLY the selected checkboxes
+      # 2. Build a valid COMPACT JSON array of ONLY the selected checkboxes
       - id: repos
         run: |
           REPOS_JSON="[]"
           
+          # Notice the added -c flag in every jq command below
           if [ "${{ inputs.repo_one }}" = "true" ]; then
-            REPOS_JSON=$(echo $REPOS_JSON | jq '. + ["palashroy/maf-test-1"]')
+            REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/app-repo-one"]')
           fi
           if [ "${{ inputs.repo_two }}" = "true" ]; then
-            REPOS_JSON=$(echo $REPOS_JSON | jq '. + ["palashroy/maf-test-2"]')
-          fi          
+            REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/app-repo-two"]')
+          fi
+          if [ "${{ inputs.repo_three }}" = "true" ]; then
+            REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/app-repo-three"]')
+          fi
+          
           echo "Final Selected Repos: $REPOS_JSON"
           
           # Guard clause: Fail the workflow if no repositories were selected
@@ -60,6 +65,7 @@ jobs:
             exit 1
           fi
           
+          # Appends the compressed single line string safely
           echo "matrix=$REPOS_JSON" >> $GITHUB_OUTPUT
 
   call-promotion:
