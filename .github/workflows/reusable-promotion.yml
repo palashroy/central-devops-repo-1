@@ -18,12 +18,13 @@ on:
     secrets:
       PROMOTION_TOKEN:
         required: true
-        description: 'A PAT or GitHub App token with write access to target repositories'
+        description: 'A PAT with write access to target repositories'
 
 jobs:
   promote:
     runs-on: ubuntu-latest
     steps:
+      # 1. Checkout the specific repo passed from the matrix using your PAT
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
@@ -31,24 +32,26 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PROMOTION_TOKEN }}
 
+      # 2. Configure Git Identity
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@://github.com"
 
+      # 3. Execute branch promotion safely
       - name: Promote Branch
         run: |
           echo "Promoting ${{ inputs.source_branch }} into ${{ inputs.target_branch }} for ${{ inputs.repository }}..."
           
-          # Fetch all remote branches explicitly for the target repo
+          # Force fetch all remote tracking branches
           git fetch origin
           
-          # Checkout and sync target branch
+          # Checkout target branch and bring it up to date
           git checkout ${{ inputs.target_branch }}
           git pull origin ${{ inputs.target_branch }}
           
-          # Attempt a fast-forward merge from the source branch
+          # Attempt a fast-forward merge from the remote tracking source branch
           git merge --ff-only origin/${{ inputs.source_branch }}
           
-          # Push the changes back to the target repository
+          # Push changes up to target remote branch
           git push origin ${{ inputs.target_branch }}

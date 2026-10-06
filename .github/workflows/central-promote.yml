@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       # Individual repository checkboxes
-      repo_one:
+      repo_maf_test_1:
         type: boolean
         description: 'Promote palashroy/maf-test-1'
         default: false
-      repo_two:
+      repo_maf_test_2:
         type: boolean
         description: 'Promote palashroy/maf-test-2'
         default: false
-           
+      
       # Environment Dropdown
       environment:
         type: choice
@@ -46,12 +46,13 @@ jobs:
         run: |
           REPOS_JSON="[]"
           
-          if [ "${{ inputs.repo_one }}" = "true" ]; then
+          if [ "${{ inputs.repo_maf_test_1 }}" = "true" ]; then
             REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/maf-test-1"]')
           fi
-          if [ "${{ inputs.repo_two }}" = "true" ]; then
+          if [ "${{ inputs.repo_maf_test_2 }}" = "true" ]; then
             REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/maf-test-2"]')
-          fi          
+          fi
+          
           echo "Final Selected Repos: $REPOS_JSON"
           
           # Guard clause: Fail the workflow if no repositories were selected
@@ -64,26 +65,15 @@ jobs:
 
   call-promotion:
     needs: evaluate-inputs
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         repository: ${{ fromJSON(needs.evaluate-inputs.outputs.selected_repos) }}
-    steps:
-      # 3. Generate a short-lived token using the GitHub App secrets
-      - name: Generate GitHub App Token
-        id: generate-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.PROMOTION_APP_ID }}
-          private-key: ${{ secrets.PROMOTION_APP_PRIVATE_KEY }}
-
-      # 4. Invoke your Reusable Workflow
-      - name: Invoke Promotion
-        uses: palashroy/central-devops-repo/.github/workflows/reusable-promotion.yml@main
-        with:
-          repository: ${{ matrix.repository }}
-          source_branch: ${{ needs.evaluate-inputs.outputs.source_branch }}
-          target_branch: ${{ needs.evaluate-inputs.outputs.target_branch }}
-        secrets:
-          PROMOTION_TOKEN: ${{ steps.generate-token.outputs.token }}
+    # References your Reusable Workflow
+    uses: palashroy/central-devops-repo/.github/workflows/reusable-promotion.yml@main
+    with:
+      repository: ${{ matrix.repository }}
+      source_branch: ${{ needs.evaluate-inputs.outputs.source_branch }}
+      target_branch: ${{ needs.evaluate-inputs.outputs.target_branch }}
+    secrets:
+      PROMOTION_TOKEN: ${{ secrets.CENTRAL_CROSS_REPO_PAT }}
