@@ -3,13 +3,17 @@ name: Central Multi-Repo Branch Promotion
 on:
   workflow_dispatch:
     inputs:
-      repository:
-        type: choice
-        description: 'Select the repository to promote'
-        required: true
-        options:
-          - 'palashroy/maf-test-1'
-          - 'palashroy/maf-test-2'
+      # Individual repository checkboxes
+      repo_one:
+        type: boolean
+        description: 'Promote palashroy/maf-test-1'
+        default: false
+      repo_two:
+        type: boolean
+        description: 'Promote palashroy/maf-test-2'
+        default: false
+      
+      # Environment Dropdown
       environment:
         type: choice
         description: 'Select the promotion environment'
@@ -19,15 +23,17 @@ on:
           - 'Promote qa to release'
 
 jobs:
-  determine-branches:
+  evaluate-inputs:
     runs-on: ubuntu-latest
     outputs:
-      source: ${{ steps.set-branches.outputs.source }}
-      target: ${{ steps.set-branches.outputs.target }}
+      source_branch: ${{ steps.vars.outputs.source }}
+      target_branch: ${{ steps.vars.outputs.target }}
+      selected_repos: ${{ steps.repos.outputs.matrix }}
     steps:
-      - id: set-branches
+      # 1. Determine Source and Target Branches
+      - id: vars
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "Promote dev to qa" ]; then
+          if [ "${{ inputs.environment }}" = "Promote dev to qa" ]; then
             echo "source=dev" >> $GITHUB_OUTPUT
             echo "target=qa" >> $GITHUB_OUTPUT
           else
@@ -35,14 +41,38 @@ jobs:
             echo "target=release" >> $GITHUB_OUTPUT
           fi
 
+      # 2. Build a valid JSON array of ONLY the selected checkboxes
+      - id: repos
+        run: |
+          REPOS_JSON="[]"
+          
+          if [ "${{ inputs.repo_one }}" = "true" ]; then
+            REPOS_JSON=$(echo $REPOS_JSON | jq '. + ["palashroy/maf-test-1"]')
+          fi
+          if [ "${{ inputs.repo_two }}" = "true" ]; then
+            REPOS_JSON=$(echo $REPOS_JSON | jq '. + ["palashroy/maf-test-2"]')
+          fi          
+          echo "Final Selected Repos: $REPOS_JSON"
+          
+          # Guard clause: Fail the workflow if no repositories were selected
+          if [ "$REPOS_JSON" = "[]" ]; then
+            echo "::error::You must select at least one repository to promote."
+            exit 1
+          fi
+          
+          echo "matrix=$REPOS_JSON" >> $GITHUB_OUTPUT
+
   call-promotion:
-    needs: determine-branches
-    # References the local reusable workflow file within the same repo
+    needs: evaluate-inputs
+    strategy:
+      # matrix runs promotions in parallel. max-parallel: 1 can be added if sequential behavior is preferred.
+      matrix:
+        repository: ${{ fromJSON(needs.evaluate-inputs.outputs.selected_repos) }}
+    # References your existing reusable workflow file
     uses: ./.github/workflows/reusable-promotion.yml
     with:
-      repository: ${{ github.event.inputs.repository }}
-      source_branch: ${{ needs.determine-branches.outputs.source }}
-      target_branch: ${{ needs.determine-branches.outputs.target }}
+      repository: ${{ matrix.repository }}
+      source_branch: ${{ needs.evaluate-inputs.outputs.source_branch }}
+      target_branch: ${{ needs.evaluate-inputs.outputs.target_branch }}
     secrets:
-      # Store a PAT or GitHub App installation token in your central repo secrets
       PROMOTION_TOKEN: ${{ secrets.CENTRAL_CROSS_REPO_PAT }}
