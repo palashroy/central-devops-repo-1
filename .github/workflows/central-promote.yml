@@ -6,17 +6,13 @@ on:
       # Individual repository checkboxes
       repo_one:
         type: boolean
-        description: 'Promote palashroy/app-repo-one'
+        description: 'Promote palashroy/maf-test-1'
         default: false
       repo_two:
         type: boolean
-        description: 'Promote palashroy/app-repo-two'
+        description: 'Promote palashroy/maf-test-2'
         default: false
-      repo_three:
-        type: boolean
-        description: 'Promote palashroy/app-repo-three'
-        default: false
-      
+           
       # Environment Dropdown
       environment:
         type: choice
@@ -51,15 +47,11 @@ jobs:
           REPOS_JSON="[]"
           
           if [ "${{ inputs.repo_one }}" = "true" ]; then
-            REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/app-repo-one"]')
+            REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/maf-test-1"]')
           fi
           if [ "${{ inputs.repo_two }}" = "true" ]; then
-            REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/app-repo-two"]')
-          fi
-          if [ "${{ inputs.repo_three }}" = "true" ]; then
-            REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/app-repo-three"]')
-          fi
-          
+            REPOS_JSON=$(echo $REPOS_JSON | jq -c '. + ["palashroy/maf-test-2"]')
+          fi          
           echo "Final Selected Repos: $REPOS_JSON"
           
           # Guard clause: Fail the workflow if no repositories were selected
