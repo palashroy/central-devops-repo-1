@@ -70,7 +70,7 @@ jobs:
       matrix:
         repository: ${{ fromJSON(needs.evaluate-inputs.outputs.selected_repos) }}
     # References your Reusable Workflow
-    uses: palashroy/central-devops-repo/.github/workflows/reusable-promotion.yml@main
+    uses: palashroy/central-devops-repo-1/.github/workflows/reusable-promotion.yml@main
     with:
       repository: ${{ matrix.repository }}
       source_branch: ${{ needs.evaluate-inputs.outputs.source_branch }}
